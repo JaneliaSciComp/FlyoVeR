@@ -1,0 +1,12 @@
+<RCC>
+  <qresource>
+    <file>../images/Play.png</file>
+    <file>../images/Play_Active.png</file>
+    <file>../images/Back.png</file>
+    <file>../images/Back_Active.png</file>
+    <file>../images/Record.png</file>
+    <file>../images/Record_Active.png</file>
+    <file>../images/Rewind.png</file>
+    <file>../images/axis.jpg</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,217 @@
+/* -*-c++-*- */
+#ifndef VIEWINGWINDOWQT
+#define VIEWINGWINDOWQT
+
+#include <iostream>
+#include <vector>
+
+#include <boost/asio.hpp> // include boost
+#include <boost/circular_buffer.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include <btBulletDynamicsCommon.h>
+
+#include <QtCore/QTimer>
+#include <QApplication>
+#include <QMainWindow>
+
+#include <osg/Node>
+#include <osg/BoundingBox>
+#include <osg/StateSet>
+#include <osg/Switch>
+#include <osg/Texture2D>
+#include <osgViewer/Viewer>
+#include <osgGA/KeySwitchMatrixManipulator>
+#include <osgViewer/ViewerEventHandlers>
+#include <osgGA/NodeTrackerManipulator>
+#include <osgGA/TrackballManipulator>
+#include <osgDB/ReadFile>
+#include <osgQt/GraphicsWindowQt>
+
+// For GLSL Shading
+#include <osg/Program>
+#include <osg/Shader>
+#include <osg/Uniform>
+
+#include <graphwidget.h>
+#include <scene_model.h>
+
+typedef boost::shared_ptr< bool > bool_ptr;
+
+class WindowCaptureCallback;
+
+class ViewingWindowQt : public QObject, public osgViewer::Viewer
+{
+	Q_OBJECT
+
+public:
+	// Initialization
+	ViewingWindowQt( int nCameras, std::vector< GraphWidget* > g, 
+	                 osg::ArgumentParser& arguments, Scene_Model* model );
+
+	// Duplication
+	// Destruction
+	~ViewingWindowQt();
+   
+	// Access
+	osg::Node* getSceneRoot();
+	osg::BoundingBox const* const getBound() const { return _model->scene_bound(); }
+	int width() { if ( _multipleScreens ) return _width; else return _width / numCameras; }
+	int height() { return _height; }
+	int numberOfCameras() { return numCameras; }
+	osg::Switch* indicator() { return _indicator; }
+
+	// Do the division here in case the call is made before averaging is complete
+	// If the average hasn't even started we return 1 to guarantee a valid sample
+	double averageFrameTime() { return ( ( _avgFrameCount == 0 ) ? 1 : _avgFrameTime / (double)_avgFrameCount ); }
+
+	// Measurement
+	// Comparison
+	// Status report
+	bool movie_mode() { return _movie_mode; }
+
+	// Status setting
+	void setXFocalLength( int i, float focal_length ) { _x_focal_length[i] = focal_length; setUpSlaves();};
+	void setYFocalLength( int i, float focal_length ) { _y_focal_length[i] = focal_length; setUpSlaves();};
+	void setCenter( int i, bool distorts, float x, float y ) { _bottom_texcoord[i] = osg::Vec2( x, y ); _x_center_distorts_y = distorts; setUpSlaves();};
+	void setClearColor( osg::Vec4 color ) { _clearColor = color; setUpSlaves(); }
+	void setGlobalBrightness( int i, osg::Vec4 color ) { _globalBrightness[i] = color; setUpSlaves(); }
+	void setTrackNode();
+	void setFieldOfView( float fov ) { _fov = fov; setUpSlaves(); }
+	void setFieldOfViewOffset( float fov_offset ) { _fov_offset = fov_offset; setUpSlaves(); }
+	void setRotatedCameras( bool yes_or_no ) { _rotateCamera = yes_or_no; setUpSlaves(); }
+
+	void setIndicatorSize( int new_size ) { _indicatorSize = new_size; setUpSlaves(); }
+	void setIndicatorBorderSize( int new_border ) { _indicatorBorderSize = new_border; setUpSlaves(); }
+	void setIndicatorPosition( osg::Vec2 new_pos ) { _indicatorPos = new_pos; setUpSlaves(); }
+	void setIndicatorScreen( int screen ) { _whichScreen = screen; setUpSlaves(); }
+	void setIndicatorMode( int index ) { _indicatorOn = index; }
+	
+	void setUpdateCallback( osg::NodeCallback* callback, bool reset = true );
+	void setSerialPort( std::string port );
+	
+	void set_output_rate( int value ) { _output_rate = 1.f / (float)value; }
+	void use_custom_widget( bool yes_or_no ) { _custom_widget_enabled = yes_or_no; }
+
+	void setManipulatorToTrackingMode() { _keyswitchManipulator->selectMatrixManipulator( 2 ); }
+	
+	void set_frame_packing( bool value ) { _packFrames = value; _frameSwitch.clear(); setUpSlaves(); averageFrames(); }
+
+	void setDiffusePower( float dPower );
+	void setDiffuseColor( osg::Vec4 diff );
+	void setAmbientColor( osg::Vec4 amb );
+	void set_export_treadmill( bool yes_or_no ) { _output_treadmill_data = yes_or_no; }
+	void set_reduced_output( bool yes_or_no ) { _use_reduced_output = yes_or_no; }
+	void set_movie_mode( bool yes_or_no ) { _movie_mode = yes_or_no; _timer.stop(); disconnect( &_timer, 0, 0, 0 ); connect( &_timer, SIGNAL( timeout() ), this, SLOT( tracePaintEvent() ) ); _timer.start( 1 ); }
+	void record( bool on_or_off, CameraTraceUpdateCallback* ct = 0 ) { _recording = on_or_off; setUpSlaves( ct ); }
+
+	// Cursor movement
+	// Element change
+	void loadOSG( std::string filename );
+	void loadModel( osg::ArgumentParser& arguments );
+	void loadImage( std::string filename, bool flip = false, bool useTextureRectangle = true );
+	void loadData( );
+	void addReportableObject( btCollisionObject* colObj ) { _model->add_reportable_object( colObj ); }
+	void resetManipulatorMode() { _keyswitchManipulator->selectMatrixManipulator( 0 ); }
+	void set_recording_directory( std::string dir, std::string file_prefix ) { _record_directory = dir; _file_prefix = file_prefix; }
+
+	// Removal
+	void clearSerialPort() { if ( _port ) delete _port; _port = 0; }
+
+	// Resizing
+	// Transformation
+	// Conversion
+	// Basic operations
+	void initializeCameras( int nCameras, int num_displays, int starting_display,
+	                        bool trace_mode );
+	void selectScene( int id );
+	void updateViewport( int i, int leftOffset, int rightOffset );
+	void setUpSlaves( CameraTraceUpdateCallback* ct = 0 );
+	void averageFrames() { _averageFrames = true; _avgFrameCount = 0; _avgFrameTime = 0.0; _ignoredFramesCount = 50; _avg_frame_buffer.clear(); }   
+	void enableDistortion( int i, bool on_or_off ) { _use_distortion[i] = on_or_off; };
+	// Outputs an event string. Prepends a time stamp, appends newline
+	void outputEvent( std::ostringstream const& eventString,
+	                  std::ostringstream const& floatEventString,
+	                  bool force_write = false,
+	                  float time_stamp = -1 ) const;
+
+	// Miscellaneous
+	// Obsolete
+	// Inapplicable
+	
+protected:
+    
+	QTimer _timer;
+
+	QWidget* addViewWidget( osg::Camera* camera );
+   
+	osg::Node* createDistortionSubgraph( int index, osg::Node* subgraph, 
+	                                     const osg::Vec4& clearColour, 
+	                                     double theta, bool addHud );
+
+	osg::Node* createDistortionSubgraphWithPacking( int index, int idx, 
+	                                                osg::Node* subgraph, 
+	                                                const osg::Vec4& clearColour, 
+	                                                double theta, bool addHud );
+
+	osg::Camera* multipleWindowWithDistortion( int i, int numCameras, int num_displays, 
+	                                           int starting_display );
+
+	void myRenderingTraversals();
+	                            
+private slots:
+
+	void paintEvent( );
+	void tracePaintEvent( );
+	
+private:
+
+	QWidget** widgets;
+	Scene_Model* _model;
+	osg::ref_ptr<osg::GraphicsContext::Traits> _traits;
+	bool_ptr _swapBuffers;
+	int numCameras;
+	bool _multipleScreens;
+	unsigned int _width, _height;
+	float _fov, _fov_offset;
+	bool _rotateCamera, _initiated;
+	bool _x_center_distorts_y;
+	std::vector< float > _x_focal_length;
+	std::vector< float > _y_focal_length;
+	std::vector< bool > _use_distortion;
+	osg::Vec4 _clearColor;
+	std::vector< osg::Vec4 > _globalBrightness;
+	std::vector< osg::Vec2 > _bottom_texcoord;
+	osg::ref_ptr<osgGA::KeySwitchMatrixManipulator> _keyswitchManipulator;
+	int _childNum;
+	osg::Switch* _indicator;
+	int _indicatorSize;
+	int _indicatorBorderSize;
+	int _indicatorOn;
+	int _whichScreen;
+	int _screenNum;
+	osg::Vec2 _indicatorPos;
+	osg::Camera* _hud;
+	btVector3 _lastPosition;
+	int _buffer_samples;
+	boost::circular_buffer< float > _avg_frame_buffer;
+	double _lastRefTime, _startRefTime, _avgFrameTime;
+	bool _averageFrames;
+	int _avgFrameCount, _ignoredFramesCount;
+	boost::asio::io_service _io;
+	boost::asio::serial_port* _port;
+	std::vector< GraphWidget* > _graph;
+	double _currSimTime, _prevSimTime;
+	bool _packFrames;
+	std::vector< osg::Texture2D* > _texture;
+	std::vector< osg::Switch* > _frameSwitch;
+	mutable double _last_output_time, _output_rate;
+	bool _output_treadmill_data, _use_reduced_output;
+	bool _custom_widget_enabled, _movie_mode;
+	bool _recording;
+	std::string _record_directory, _file_prefix;
+	WindowCaptureCallback* _capture_callback;
+};
+
+#endif
+

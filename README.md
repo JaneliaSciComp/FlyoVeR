@@ -9,7 +9,7 @@ FlyoVeR is a virtual reality tool for displaying virtual environments to drosoph
 
 ## Using Software
 
-The easiest way to use the software is run the FlyOver and RemoteDataServer binaries located [here](https://github.com/JaneliaSciComp/FlyoVeR/binaries).  These have been compiled for x64 architecture and tested on Windows 7.  
+The easiest way to use the software is run the FlyOver and RemoteDataServer binaries located [HERE](https://github.com/JaneliaSciComp/FlyoVeR/tree/master/binaries).  These have been compiled for x64 architecture and tested on Windows 7.  
 
 ## Building Software
 

@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ReinforcementCategoryGroupBox</class>
+ <widget class="QGroupBox" name="ReinforcementCategoryGroupBox">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>374</width>
+    <height>139</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>GroupBox</string>
+  </property>
+  <property name="title">
+   <string>ReinforcementCategoryBox</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <layout class="QFormLayout" name="formLayout_4">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_60">
+       <property name="toolTip">
+        <string>Distances from object center less than this value will use Central reinforcement value</string>
+       </property>
+       <property name="text">
+        <string>Inner radius</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_inner_radius_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="zone_inner_radius_spinBox">
+       <property name="toolTip">
+        <string>Distances from object center less than this value will use Central reinforcement value</string>
+       </property>
+       <property name="suffix">
+        <string> mm</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="1">
+    <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_64">
+       <property name="toolTip">
+        <string>Reinforcement value at the inner radius distance from object center</string>
+       </property>
+       <property name="text">
+        <string>Central Value</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_max_val_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QSpinBox" name="zone_max_val_spinBox">
+       <property name="toolTip">
+        <string>Reinforcement value at the inner radius distance from object center</string>
+       </property>
+       <property name="minimum">
+        <number>-1000</number>
+       </property>
+       <property name="maximum">
+        <number>1000</number>
+       </property>
+       <property name="value">
+        <number>100</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QFormLayout" name="formLayout_5">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_61">
+       <property name="toolTip">
+        <string>Distances greater than this from object center will use Baseline reinforcement value</string>
+       </property>
+       <property name="text">
+        <string>Outer radius</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_outer_radius_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="zone_outer_radius_spinBox">
+       <property name="toolTip">
+        <string>Distances greater than this from object center will use Baseline reinforcement value</string>
+       </property>
+       <property name="suffix">
+        <string> mm</string>
+       </property>
+       <property name="maximum">
+        <double>9999.989999999999782</double>
+       </property>
+       <property name="value">
+        <double>10.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="1">
+    <layout class="QFormLayout" name="formLayout_3">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_62">
+       <property name="toolTip">
+        <string>Gamma exponent controlling shape of reinforcement value between inner and outer radius</string>
+       </property>
+       <property name="text">
+        <string>Exponent</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_gamma_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="zone_gamma_spinBox">
+       <property name="toolTip">
+        <string>Gamma exponent controlling shape of reinforcement value between inner and outer radius</string>
+       </property>
+       <property name="minimum">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>10.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="value">
+        <double>1.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <layout class="QFormLayout" name="formLayout_9">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_65">
+       <property name="toolTip">
+        <string>How long to reinforce after animal enters zone. Zero means to use a continuous ramped value.</string>
+       </property>
+       <property name="text">
+        <string>Duration</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_duration_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="zone_duration_spinBox">
+       <property name="toolTip">
+        <string>How long to reinforce after animal enters zone. Zero means to use a continuous ramped value.</string>
+       </property>
+       <property name="suffix">
+        <string> s</string>
+       </property>
+       <property name="minimum">
+        <double>0.000000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>1000.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.100000000000000</double>
+       </property>
+       <property name="value">
+        <double>0.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="1">
+    <layout class="QFormLayout" name="formLayout_8">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_63">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Distance from center at which duration can be reset. (What??)</string>
+       </property>
+       <property name="text">
+        <string>Reset radius offset</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_reset_radius_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="zone_reset_radius_spinBox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Distance from outer radius at which duration can be reset.</string>
+       </property>
+       <property name="suffix">
+        <string> mm</string>
+       </property>
+       <property name="minimum">
+        <double>0.000000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>9999.989999999999782</double>
+       </property>
+       <property name="value">
+        <double>0.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <layout class="QFormLayout" name="formLayout_6">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_67">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Maximum distance from object center that might trigger a respawn</string>
+       </property>
+       <property name="text">
+        <string>Respawn radius</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_respawn_radius_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="zone_respawn_radius_spinBox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Maximum distance from object center that might trigger a respawn</string>
+       </property>
+       <property name="suffix">
+        <string> mm</string>
+       </property>
+       <property name="maximum">
+        <double>9999.989999999999782</double>
+       </property>
+       <property name="value">
+        <double>2.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="1">
+    <layout class="QFormLayout" name="formLayout_7">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_68">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Interval animal must remain within respawn radius to trigger a respawn</string>
+       </property>
+       <property name="text">
+        <string>Respawn timeout</string>
+       </property>
+       <property name="buddy">
+        <cstring>zone_respawn_timeout_spinBox</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="zone_respawn_timeout_spinBox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Interval animal must remain within respawn radius to trigger a respawn</string>
+       </property>
+       <property name="suffix">
+        <string> s</string>
+       </property>
+       <property name="maximum">
+        <double>9999.989999999999782</double>
+       </property>
+       <property name="value">
+        <double>100.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

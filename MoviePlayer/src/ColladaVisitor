@@ -1,0 +1,249 @@
+/* -*-c++-*- */
+
+#ifndef COLLADAVISITOR_H
+#define COLLADAVISITOR_H
+
+#include <iostream>
+#include <utility>
+#include <vector>
+
+#include <osg/BoundingBox>
+#include <osg/CullFace>
+#include <osg/Geode>
+#include <osg/Geometry>
+#include <osg/Group>
+#include <osg/LightModel>
+#include <osg/Node>
+#include <osg/Shape>
+#include <osg/MatrixTransform>
+#include <osg/NodeVisitor>
+
+typedef std::pair< osg::Vec3f, osg::MatrixTransform* > NodeOffsetPair;
+
+class ColladaVisitor : public osg::NodeVisitor
+{
+  public:
+
+  ColladaVisitor()
+	  : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
+	{}
+
+	virtual void apply(osg::Group& node)
+	{
+		traverse(node);
+	}
+
+	virtual void apply(osg::MatrixTransform& node)
+	{
+		std::string const& name = node.getName();
+
+		if ( ( ( osg::Geode* )( node.getChild( 0 ) ) )->getNumDrawables() > 0 )
+		{
+			NodeOffsetPair flat_node = flatten( node );
+		
+		if ( name[0] == '_' && name[ name.size() - 1 ] == '_' )
+				nodes.push_back( flat_node );
+			else
+				others.push_back( flat_node );
+		}
+      
+		traverse(node);
+	}
+
+	void apply(osg::Geode& node)
+	{
+		osg::ref_ptr< osg::LightModel > pLightModel = new osg::LightModel();
+		pLightModel->setTwoSided( true );
+		osg::StateSet* pState = node.getOrCreateStateSet();
+		pState->setAttributeAndModes( pLightModel.get(), osg::StateAttribute::ON);   
+   
+		traverse(node);
+	}
+	
+	std::vector< NodeOffsetPair > others;
+	std::vector< NodeOffsetPair > nodes;
+   
+protected:
+
+	NodeOffsetPair flatten( osg::MatrixTransform& motionNode )
+	{
+		osg::ref_ptr< osg::MatrixTransform > node;
+		node = new osg::MatrixTransform;
+		
+		node->setName( motionNode.getName() );
+		
+		osg::Matrixd mat;
+		motionNode.computeLocalToWorldMatrix( mat, new osg::NodeVisitor );
+		
+		// In Collada, each MatrixTransform has one Geode node
+		osg::Geode* geode = ( osg::Geode* )motionNode.getChild( 0 );
+		osg::Geode* new_geode = new osg::Geode();
+
+		osg::Vec3f center = motionNode.computeBound().center();			
+
+		// which in turn has one piece of geometry from which
+		// we yank out the vertex data
+		for( uint32_t child = 0; child < geode->getNumDrawables(); child++ )
+		{
+			osg::Geometry* geom = geode->getDrawable( child )->asGeometry();
+			osg::Array* vertices = geom->getVertexArray();
+			osg::Array* normals = geom->getNormalArray();
+			bool has_normals = normals != 0;
+			float* v_data = (float*)( vertices->getDataPointer() );
+		
+			osg::Matrixd inv_mat;
+			inv_mat.invert_4x3( mat );
+			inv_mat.setTrans( 0., 0., 0. );
+					
+			float* n_data = 0;
+			if ( has_normals )
+				n_data = (float*)( normals->getDataPointer() );
+
+			osg::Vec3Array* new_vertices = new osg::Vec3Array;
+			osg::Vec3Array* new_normals = new osg::Vec3Array;
+			std::map< int, int > index_mapper;
+			int current_index = 0;
+				
+			// Bash the geometry to flatten out the transforms and reset
+			// so their origin is at 0,0,0
+			for ( uint32_t i = 0; i < vertices->getNumElements(); i++ )
+			{
+				osg::Vec3 v_pt;
+				osg::Vec3f v( v_data[3*i],  v_data[3*i + 1],  v_data[3*i + 2] );
+				v_pt = ( v * mat ) - center;
+				v_data[3*i] = v_pt.x();
+				v_data[3*i + 1] = v_pt.y();
+				v_data[3*i + 2] = v_pt.z();
+
+				osg::Vec3 n_pt;
+				if ( has_normals )
+				{
+					osg::Vec3f n( n_data[3*i],  n_data[3*i + 1],  n_data[3*i + 2] );
+					n_pt = inv_mat * n;
+					n_pt.normalize();
+					n_data[3*i] = n_pt.x();
+					n_data[3*i + 1] = n_pt.y();
+					n_data[3*i + 2] = n_pt.z();
+				}
+			
+				bool found = false;
+				uint32_t j;
+					
+				// Remove duplicate vertices to make objects
+				// truely solid/watertight
+				for ( j = 0; !found && j < new_vertices->size(); j++ )
+					found = ( v_pt == (*new_vertices)[j] );
+						
+				if ( found )
+				{
+					index_mapper[ i ] = j - 1;
+				}
+				else
+				{
+					new_vertices->push_back( v_pt );
+					if ( has_normals )
+						new_normals->push_back( n_pt );
+					index_mapper[ i ] = current_index++;
+				}
+			}
+		
+			osg::Geometry* geometry = new osg::Geometry();
+			new_geode->addDrawable( geometry );
+			geometry->setVertexArray( new_vertices );
+			if ( has_normals )
+			{
+				geometry->setNormalArray( new_normals );
+				geometry->setNormalBinding( geom->getNormalBinding() );
+			}
+		
+			// Colors from Collada are stored in the state set
+			geometry->setStateSet( geom->getStateSet() );
+			if ( geom->getColorArray() != 0 )
+				geometry->setColorArray( geom->getColorArray() );
+			else
+				geometry->setColorData( geom->getColorData() );
+			geometry->setColorBinding( geom->getColorBinding() );
+		
+			std::cout << motionNode.getName() << " " << geom->getNumTexCoordArrays() << std::endl;
+		
+			for ( uint32_t i = 0; i < geom->getNumTexCoordArrays(); i++ )
+			{
+				geometry->setTexCoordArray( i, geom->getTexCoordArray( i ) );
+				geometry->setTexCoordData( i, geom->getTexCoordData( i ) );			
+			}
+		
+			for ( uint32_t i = 0; i < geom->getNumPrimitiveSets(); i++ )
+			{
+				osg::PrimitiveSet* pSet = geom->getPrimitiveSet( i );
+				osg::DrawElementsUInt* side = 
+					new osg::DrawElementsUInt( pSet->getMode(), 0 );
+				for( uint32_t j = 0; j < pSet->getNumIndices(); j++ )
+				{
+					side->push_back( index_mapper[ pSet->index( j ) ] );
+				}
+						
+				geometry->addPrimitiveSet( side );
+			}
+		}
+		
+		node->addChild( new_geode );
+	
+		return NodeOffsetPair( center, node.release() );
+	}
+}; 
+
+class PrintVisitor : public osg::NodeVisitor
+{
+  public:
+
+  PrintVisitor()
+	  : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
+	{}
+
+	void apply(osg::Group& node)
+	{
+		std::cout << indent << node.getName() << " ( " << node.className() << " )" << std::endl;
+		indent.append( " " );
+		traverse(node);
+		indent.erase( indent.end() - 1 );
+	}
+
+	void apply(osg::Node& node)
+	{
+		std::cout << indent << node.getName() << " ( " << node.className() << " ) " << std::endl;
+		traverse(node);
+	}
+
+	void apply(osg::Geode& node)
+	{
+		int count = node.getNumDrawables();
+		
+		std::cout << indent << node.getName() << " ( " << node.className() << " ) " 
+		          << count << std::endl;
+		if ( count > 0 )
+		{
+			indent.append( " " );
+			osg::Shape* shape = node.getDrawable( 0 )->getShape();
+			if ( shape )
+				std::cout << indent << " Shape - " << shape->className() << std::endl;
+			osg::Geometry* geo = node.getDrawable( 0 )->asGeometry();
+			if ( geo )
+			{
+				osg::Array* normals = geo->getNormalArray();
+				std::cout << indent << " Geometry - " << geo->getVertexArray()->getNumElements();
+				if ( normals != 0 )
+					std::cout << ", " << normals->getNumElements();
+		
+				std::cout << std::endl;
+			}
+			
+			indent.erase( indent.end() - 1 );
+		}
+		
+		traverse(node);
+	}
+
+	std::string indent;
+};
+
+#endif
